@@ -1,0 +1,1 @@
+# slingshot-excuse-generator
