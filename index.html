@@ -359,6 +359,27 @@
             ]
         };
 
+        // 自動連結當天真實日期
+        function updateTodayCalendar() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const monthNamesEng = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+            const monthNamesChi = ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"];
+            const weekNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+
+            const calYear = document.getElementById('calYear');
+            const calMonthEng = document.getElementById('calMonthEng');
+            const calMonthChi = document.getElementById('calMonthChi');
+            const calDay = document.getElementById('calDay');
+            const calWeek = document.getElementById('calWeek');
+
+            if (calYear) calYear.innerText = year;
+            if (calMonthEng) calMonthEng.innerText = monthNamesEng[today.getMonth()];
+            if (calMonthChi) calMonthChi.innerText = monthNamesChi[today.getMonth()];
+            if (calDay) calDay.innerText = today.getDate();
+            if (calWeek) calWeek.innerText = weekNames[today.getDay()];
+        }
+
         // ================= Web Audio 擬真音效 Generator =================
         function initAudio() {
             if (!audioCtx) {
@@ -461,6 +482,7 @@
 
         // ================= 初始化與遊戲循環 =================
         window.onload = function() {
+            updateTodayCalendar();
             canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d');
             resizeCanvas();
