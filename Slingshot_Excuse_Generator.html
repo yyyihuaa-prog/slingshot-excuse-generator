@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>爛藉口彈弓產生器</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts 傳統質感與黑體 (加入 Noto Sans TC 確保繁體中文 100% 完整無缺字) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@700;900&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
+            background-color: #261c14;
+        }
+
+        .font-serif-tc {
+            font-family: 'Noto Serif TC', 'LXGW WenKai TC', serif;
+        }
+
+        .font-sans-tc {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        /* 撕日曆樣式 */
+        .calendar-shadow {
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 12px #3a271d, 0 0 0 14px #261c14;
+        }
+
+        .tear-anim {
+            animation: tearOff 0.7s forwards ease-in-out;
+            transform-origin: top center;
+        }
+
+        @keyframes tearOff {
+            0% { transform: rotate(0deg) translateY(0); opacity: 1; }
+            30% { transform: rotate(-5deg) translateY(20px); }
+            100% { transform: rotate(25deg) translateY(600px) rotateX(45deg); opacity: 0; }
+        }
+
+        /* 飛鴿傳書動畫 */
+        @keyframes pigeonFlyThrough {
+            0% { transform: translateX(-150px) translateY(40px) scale(0.7) rotate(-10deg); }
+            50% { transform: translateX(50vw) translateY(-20px) scale(1.2) rotate(5deg); }
+            100% { transform: translateX(110vw) translateY(30px) scale(0.9) rotate(0deg); }
+        }
+
+        .animate-pigeon-fly {
+            animation: pigeonFlyThrough 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-0 m-0">
+
+    <!-- App 總容器 (限制手機或桌面比例) -->
+    <div id="app" class="relative w-full max-w-md h-[100vh] max-h-[850px] bg-sky-300 shadow-2xl overflow-hidden flex flex-col justify-between rounded-none sm:rounded-3xl border-0 sm:border-8 border-slate-800">
+
+        <!-- ==================== 第一頁：復古老日曆 ==================== -->
+        <div id="pageCalendar" class="absolute inset-0 z-30 bg-[#2b1b12] p-4 flex flex-col items-center justify-center transition-all duration-500">
+            <!-- 撕日曆卡片整體 -->
+            <div id="calendarCard" class="w-full max-w-[340px] bg-[#fbf6e9] rounded-t-sm rounded-b-xl p-5 border-t-[14px] border-[#991b1b] calendar-shadow flex flex-col justify-between text-[#292524] relative">
+                
+                <!-- 頂部西曆日期與農曆標題 -->
+                <div class="border-b-2 border-[#991b1b] pb-2">
+                    <div class="flex justify-between items-baseline">
+                        <span id="calYear" class="text-2xl font-black tracking-tighter text-[#991b1b] font-serif-tc">2026</span>
+                        <span id="calMonthEng" class="text-xl font-extrabold tracking-widest text-[#991b1b] font-serif-tc">NOVEMBER</span>
+                        <span id="calMonthChi" class="text-xl font-bold text-[#991b1b] font-serif-tc">十一月</span>
+                    </div>
+                    <div class="flex justify-between text-xs text-[#78350f] mt-1 font-serif-tc font-bold">
+                        <span>歲次丙午年·生肖馬</span>
+                        <span id="lunarDate">農曆十月初四</span>
+                        <span>吉日記錄</span>
+                    </div>
+                </div>
+
+                <!-- 巨大日數與對聯 -->
+                <div class="my-4 flex items-center justify-between px-1">
+                    <!-- 左對聯 -->
+                    <div class="text-xs font-bold text-[#78350f] leading-snug w-4 font-serif-tc text-center">
+                        福水長流·平安順遂
+                    </div>
+                    <!-- 巨大當天日期 -->
+                    <div id="calDay" class="text-8xl font-black text-[#dc2626] tracking-tighter font-serif-tc drop-shadow-sm leading-none">
+                        12
+                    </div>
+                    <!-- 右對聯 -->
+                    <div class="text-xs font-bold text-[#78350f] leading-snug w-4 font-serif-tc text-center">
+                        財源廣進·闔家安康
+                    </div>
+                </div>
+
+                <div class="text-center text-xs text-[#78350f] border-t border-b border-amber-200 py-1 mb-3 font-serif-tc font-bold">
+                    <span id="calWeek">星期四</span> · 宜靜心整理
+                </div>
+
+                <!-- 標題框：爛藉口產生器 -->
+                <div class="border-2 border-[#991b1b] p-2 text-center bg-[#fffbeb] mb-3 rounded">
+                    <div class="text-xs text-[#78350f] flex justify-between font-serif-tc mb-1 px-2">
+                        <span>丙午年 十月初四</span>
+                        <span>歲煞在北 五行屬水</span>
+                    </div>
+                    <!-- 爛藉口產生器 (滿版大字) -->
+                    <h1 class="text-3xl font-black text-[#dc2626] tracking-widest font-serif-tc whitespace-nowrap my-1">
+                        爛藉口產生器
+                    </h1>
+                </div>
+
+                <!-- 宜與忌雙欄框 -->
+                <div class="grid grid-cols-2 gap-2 mb-4 text-center font-serif-tc">
+                    <div class="border-2 border-emerald-700 bg-emerald-50/50 p-2 rounded flex items-center justify-center gap-1">
+                        <span class="text-2xl font-black text-emerald-800 border-r-2 border-emerald-700 pr-2">宜</span>
+                        <span class="text-base font-bold text-emerald-950">待在家裡</span>
+                    </div>
+                    <div class="border-2 border-[#991b1b] bg-rose-50/50 p-2 rounded flex items-center justify-center gap-1">
+                        <span class="text-2xl font-black text-[#991b1b] border-r-2 border-[#991b1b] pr-2">忌</span>
+                        <span class="text-base font-bold text-rose-950">出門社交</span>
+                    </div>
+                </div>
+
+                <!-- 按鈕：點擊爛藉口，逃避世俗的紛擾 ➔ -->
+                <button onclick="tearCalendar()" class="w-full bg-[#991b1b] hover:bg-red-800 text-amber-100 font-serif-tc font-bold py-3 px-2 rounded-lg border-2 border-amber-300 shadow-md active:scale-95 transition-all text-sm tracking-wider whitespace-nowrap flex items-center justify-center gap-1">
+                    <span>點擊爛藉口，逃避世俗的紛擾</span>
+                    <span class="text-lg">➔</span>
+                </button>
+
+                <!-- Footer：創作者與製作時間 -->
+                <div class="mt-4 pt-2 border-t border-amber-200 text-center text-[11px] font-bold text-[#78350f] font-serif-tc">
+                    創作者：邱奕華、顏睿靚、王心渝 製作時間：11/12
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 第二頁：選擇遊戲難度 ==================== -->
+        <div id="pageDifficulty" class="absolute inset-0 z-20 bg-slate-900/40 backdrop-blur-sm p-5 flex flex-col items-center justify-center hidden transition-all duration-300 font-sans-tc">
+            <div class="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border-4 border-slate-800 flex flex-col items-center text-center relative">
+                
+                <!-- 手繪風標靶 + 正中靶心的藍色飛鏢 -->
+                <div class="w-24 h-24 mb-3 relative flex items-center justify-center">
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+                        <!-- 標靶圈圈 -->
+                        <circle cx="50" cy="50" r="45" fill="#DC2626" stroke="#0F172A" stroke-width="5"/>
+                        <circle cx="50" cy="50" r="32" fill="#FFFFFF" stroke="#0F172A" stroke-width="4"/>
+                        <circle cx="50" cy="50" r="20" fill="#DC2626" stroke="#0F172A" stroke-width="4"/>
+                        <circle cx="50" cy="50" r="9" fill="#FACC15" stroke="#0F172A" stroke-width="3"/>
+                        <!-- 正中靶心 (Center Hit) 的藍色飛鏢 -->
+                        <g transform="translate(50, 50) rotate(-35) translate(-50, -50)">
+                            <polygon points="50,50 45,30 55,30" fill="#94A3B8" stroke="#0F172A" stroke-width="1.5"/>
+                            <rect x="47" y="10" width="6" height="20" fill="#0284C7" stroke="#0F172A" stroke-width="2"/>
+                            <polygon points="47,12 35,0 47,5" fill="#38BDF8" stroke="#0F172A" stroke-width="2"/>
+                            <polygon points="53,12 65,0 53,5" fill="#38BDF8" stroke="#0F172A" stroke-width="2"/>
+                        </g>
+                    </svg>
+                </div>
+
+                <h2 class="text-2xl font-black text-slate-900 mb-1 font-sans-tc">請選擇遊戲難度</h2>
+                <p class="text-xs font-bold text-slate-600 mb-5 font-sans-tc">難度越高，鴿子飛越快，產出的藉口越正式！</p>
+
+                <!-- 三種難度選項 -->
+                <div class="w-full space-y-3 font-bold font-sans-tc">
+                    <button onclick="selectDifficulty('easy')" class="w-full bg-emerald-400 hover:bg-emerald-500 text-slate-900 border-4 border-slate-900 rounded-2xl p-3 text-left shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all flex items-center justify-between">
+                        <div>
+                            <div class="text-base font-black">簡單模式 (Easy)</div>
+                            <div class="text-[11px] font-bold opacity-90">鴿子很大飛得慢 ➔ 朋友聚會 / 搞笑廢柴藉口</div>
+                        </div>
+                        <span class="text-2xl">🍺</span>
+                    </button>
+
+                    <button onclick="selectDifficulty('medium')" class="w-full bg-amber-300 hover:bg-amber-400 text-slate-900 border-4 border-slate-900 rounded-2xl p-3 text-left shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all flex items-center justify-between">
+                        <div>
+                            <div class="text-base font-black">中等模式 (Medium)</div>
+                            <div class="text-[11px] font-bold opacity-90">一般速度與體型 ➔ 請假 / 常規個人理由</div>
+                        </div>
+                        <span class="text-2xl">🏠</span>
+                    </button>
+
+                    <button onclick="selectDifficulty('hard')" class="w-full bg-rose-400 hover:bg-rose-500 text-slate-900 border-4 border-slate-900 rounded-2xl p-3 text-left shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all flex items-center justify-between">
+                        <div>
+                            <div class="text-base font-black">困難模式 (Hard)</div>
+                            <div class="text-[11px] font-bold opacity-90">鴿子小、飛行疾速 ➔ 正式職場 / 官方專業藉口</div>
+                        </div>
+                        <span class="text-2xl">💼</span>
+                    </button>
+                </div>
+
+                <div class="mt-4 pt-3 border-t-2 border-slate-200 text-[11px] font-extrabold text-slate-500 flex items-center justify-center gap-1 font-sans-tc">
+                    <span>👆 玩法：在畫面上向下拖拽石頭瞄準，放開即可彈射發射！</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 第三頁：藍天綠地彈弓遊戲 ==================== -->
+        <div id="gameContainer" class="relative w-full h-full flex flex-col justify-between">
+            <!-- 頂部 HUD (對齊手稿 4 個框) -->
+            <div class="absolute top-3 left-3 right-3 z-10 flex justify-between items-center pointer-events-none font-black text-slate-900">
+                <!-- 1. 放鴿子！標題框 -->
+                <div class="bg-white/90 border-3 border-slate-900 px-3 py-1.5 rounded-xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] text-sm">
+                    放鴿子！🐦
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <!-- 2. 射擊數 -->
+                    <div class="bg-white/90 border-3 border-slate-900 px-3 py-1.5 rounded-xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] text-xs flex items-center gap-1">
+                        <span>射擊數:</span>
+                        <span id="scoreText" class="text-sm font-black text-red-600">0</span>
+                    </div>
+
+                    <!-- 3. 目前難度模式 -->
+                    <div id="modeBadge" class="bg-emerald-300 border-3 border-slate-900 px-2.5 py-1.5 rounded-xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] text-xs">
+                        簡單
+                    </div>
+
+                    <!-- 4. 音量鍵 (可開關音效) -->
+                    <button onclick="toggleAudio()" class="pointer-events-auto bg-white/90 hover:bg-white border-3 border-slate-900 w-9 h-9 rounded-xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] flex items-center justify-center active:translate-y-0.5">
+                        <span id="audioIcon" class="text-base">🔊</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Canvas 遊戲畫布 -->
+            <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+        </div>
+
+        <!-- 飛鴿傳書過場動畫 Overlay (丑萌灰鴿信差) -->
+        <div id="pigeonAnimOverlay" class="fixed inset-0 z-50 pointer-events-none hidden overflow-hidden flex items-center">
+            <div id="animPigeon" class="relative">
+                <div class="w-32 h-32 relative drop-shadow-2xl">
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <!-- 胖灰身 -->
+                        <ellipse cx="50" cy="55" rx="30" ry="22" fill="#64748B" stroke="#0F172A" stroke-width="4"/>
+                        <!-- 頸部綠耀斑 -->
+                        <path d="M60,42 Q68,48 64,55" stroke="#10B981" stroke-width="6" fill="none" stroke-linecap="round"/>
+                        <!-- 灰頭 -->
+                        <circle cx="72" cy="40" r="15" fill="#475569" stroke="#0F172A" stroke-width="4"/>
+                        <!-- 呆大眼 -->
+                        <circle cx="76" cy="38" r="4.5" fill="#FFFFFF" stroke="#0F172A" stroke-width="1.5"/>
+                        <circle cx="77" cy="38" r="2.5" fill="#0F172A"/>
+                        <!-- 粉嘴 -->
+                        <polygon points="84,40 98,44 85,49" fill="#F97316" stroke="#0F172A" stroke-width="3"/>
+                        <!-- 翅膀 -->
+                        <path d="M35,45 Q20,15 45,30" fill="#334155" stroke="#0F172A" stroke-width="4"/>
+                    </svg>
+                    <!-- 信封 -->
+                    <div class="absolute right-0 top-12 w-10 h-7 bg-amber-100 border-2 border-slate-900 rounded shadow-md flex items-center justify-center rotate-12">
+                        <span class="text-xs font-bold text-red-600">✉️</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 擊中產生爛藉口 Pop-up Modal -->
+        <div id="excuseModal" class="absolute inset-0 z-40 bg-slate-900/60 backdrop-blur-sm p-4 flex items-center justify-center hidden">
+            <div class="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border-4 border-slate-900 text-center relative flex flex-col items-center animate-bounce-short">
+                
+                <!-- 鴿子圖標標頭 -->
+                <div class="w-16 h-16 -mt-12 bg-amber-200 border-4 border-slate-900 rounded-full flex items-center justify-center text-3xl shadow-md">
+                    🐦
+                </div>
+
+                <div id="modalBadge" class="mt-2 inline-block px-3 py-1 bg-rose-500 text-white border-2 border-slate-900 rounded-full text-xs font-black shadow-sm">
+                    獲得擊中成果！
+                </div>
+
+                <h3 class="text-xl font-black text-slate-900 mt-2 mb-3">「獲得完美爛藉口！」</h3>
+
+                <!-- 藉口內容區 -->
+                <div class="w-full bg-amber-50/80 border-3 border-amber-300 rounded-2xl p-4 mb-4 text-left shadow-inner">
+                    <p id="excuseText" class="text-sm font-bold text-slate-800 leading-relaxed font-serif-tc">
+                        「我家的貓今天心情極度不佳，我必須留在家裡當陪伴犬，不然它會拆家。」
+                    </p>
+                </div>
+
+                <!-- 3 個按鈕 (包含換種模式) -->
+                <div class="w-full space-y-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="copyExcuse()" class="bg-emerald-400 hover:bg-emerald-500 text-slate-900 font-extrabold py-2.5 px-3 border-3 border-slate-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] active:translate-y-0.5 text-xs flex items-center justify-center gap-1">
+                            <span>📋 複製藉口</span>
+                        </button>
+                        <button onclick="closeModal()" class="bg-amber-300 hover:bg-amber-400 text-slate-900 font-extrabold py-2.5 px-3 border-3 border-slate-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] active:translate-y-0.5 text-xs flex items-center justify-center gap-1">
+                            <span>🎯 再射一隻</span>
+                        </button>
+                    </div>
+
+                    <!-- 第三個按鈕：換種模式 -->
+                    <button onclick="switchModeFromModal()" class="w-full bg-sky-300 hover:bg-sky-400 text-slate-900 font-black py-2.5 px-3 border-3 border-slate-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] active:translate-y-0.5 text-xs flex items-center justify-center gap-1">
+                        <span>🔄 換種模式</span>
+                    </button>
+                </div>
+
+                <div id="copyToast" class="absolute -bottom-10 bg-slate-800 text-white text-xs px-3 py-1.5 rounded-full font-bold opacity-0 transition-all pointer-events-none">
+                    已複製到剪貼簿！
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript 遊戲邏輯與 Web Audio 聲效 -->
+    <script>
+        // ================= 全域狀態 =================
+        let difficulty = 'easy';
+        let score = 0;
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        // Canvas 與遊戲狀態
+        let canvas, ctx;
+        let gameActive = false;
+        let pigeons = [];
+        let featherParticles = [];
+        let hitImpactWaves = [];
+        
+        // 彈弓與石頭物理
+        let slingshotPos = { x: 0, y: 0 };
+        let stonePos = { x: 0, y: 0 };
+        let isDragging = false;
+        let dragPos = { x: 0, y: 0 };
+        let projectile = null; // { x, y, vx, vy, radius }
+
+        // 擴充藉口資料庫 (每個模式至少 7 個不同的豐富藉口)
+        const EXCUSES = {
+            easy: [
+                "我家的貓今天心情極度不佳，我必須留在家裡當陪伴犬，不然它會拆家。",
+                "剛剛要出門時發現拖鞋被左腳踩到了右腳，感覺今天是個不宜出門的奇數日。",
+                "我剛準備出門，發現冷氣遙控器失蹤了，我不能放任冷氣吹一整天拯救地球。",
+                "我被自家棉被綁架了，封印解除預計需要至少 8 個小時。",
+                "今天出門門口有一隻玄鳳鸚鵡一直看著我，我覺得它在暗示我今天會有劫難。",
+                "剛剛在吃早餐時把醬油誤當成美式咖啡喝了一大口，目前正在重新懷疑人生。",
+                "我家的洗澡水溫度調節器壞了，水溫只在冰山與火山之間切換，我需要時間冷靜。"
+            ],
+            medium: [
+                "因突發性偏頭痛與腸胃嚴重不適，需居家休養並觀察症狀，今日特此請假。",
+                "家中突發緊急水管漏水狀況，正等待水電技師到場維修，無法按時出席。",
+                "因家庭緊急突發事務需要親自處理，今日需請事假一日，造成不便敬請見諒。",
+                "今日身體微恙且有發燒前兆，為避免影響大家，決定先居家自主健康管理。",
+                "個人重要證件與鑰匙意外鎖在室內，目前正聯繫鎖匠處理中，無法準時到達。",
+                "因居住社區無預警緊急停電影響線上作業與出門配備，需留守處理善後。",
+                "今日上午需前往醫院進行例行性門診檢查與抽血追蹤，故需請假半日。"
+            ],
+            hard: [
+                "鑑於當前整體工作時程與資源調配之考量，本人今日需專注於內部關鍵指標之優化，故不便出席會議。",
+                "因接獲突發性之跨部門緊急業務對接需求，需全日進行資料彙整與評估，特此向貴單位報備請假。",
+                "經評估個人今日之產能與狀態，為確保後續專案交付品質，決定採取預防性休息以維持長期綜效。",
+                "由於今日專案排程發生結構性衝突，需優先處理優先級高於常規流程之緊急案件，故無法參會。",
+                "因不可抗力之個人生涯關鍵事務交辦，今日不便參與例行行程，相關工作已妥善交接說明。",
+                "基於組織當前風險控制原則，本人需於今日優先完成既定審計資產之覆核，特此請假一日。",
+                "因重要外部合作夥伴臨時排定緊急關鍵會議，時間重疊無法抽身，敬請諒察。"
+            ]
+        };
+
+        // ================= Web Audio 擬真音效 Generator =================
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'stretch') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(300, now + 0.1);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'shoot') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'hit') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.setValueAtTime(300, now + 0.05);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'tear') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.linearRampToValueAtTime(200, now + 0.25);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        function toggleAudio() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('audioIcon').innerText = soundEnabled ? '🔊' : '🔇';
+        }
+
+        // ================= 頁面切換邏輯 =================
+        function tearCalendar() {
+            playSound('tear');
+            const card = document.getElementById('calendarCard');
+            card.classList.add('tear-anim');
+            
+            setTimeout(() => {
+                document.getElementById('pageCalendar').classList.add('hidden');
+                document.getElementById('pageDifficulty').classList.remove('hidden');
+            }, 600);
+        }
+
+        function selectDifficulty(mode) {
+            difficulty = mode;
+            playSound('shoot');
+
+            // 更新難度 Badge
+            const badge = document.getElementById('modeBadge');
+            if (badge) {
+                if (mode === 'easy') {
+                    badge.innerText = '簡單';
+                    badge.className = 'bg-emerald-300 border-3 border-slate-900 px-2.5 py-1.5 rounded-xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] text-xs';
+                } else if (mode === 'medium') {
+                    badge.innerText = '中等';
+                    badge.className = 'bg-amber-300 border-3 border-slate-900 px-2.5 py-1.5 rounded-xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] text-xs';
+                } else {
+                    badge.innerText = '困難';
+                    badge.className = 'bg-rose-400 border-3 border-slate-900 px-2.5 py-1.5 rounded-xl shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] text-xs';
+                }
+            }
+
+            document.getElementById('pageDifficulty').classList.add('hidden');
+            startGame();
+        }
+
+        function switchModeFromModal() {
+            document.getElementById('excuseModal').classList.add('hidden');
+            document.getElementById('pageDifficulty').classList.remove('hidden');
+            gameActive = false;
+        }
+
+        // ================= 初始化與遊戲循環 =================
+        window.onload = function() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // 監聽拉動彈弓事件
+            canvas.addEventListener('mousedown', onPointerDown);
+            canvas.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('mouseup', onPointerUp);
+
+            canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+            canvas.addEventListener('touchmove', onPointerMove, { passive: false });
+            window.addEventListener('touchend', onPointerUp);
+        };
+
+        function resizeCanvas() {
+            const container = document.getElementById('gameContainer');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            slingshotPos = {
+                x: canvas.width / 2,
+                y: canvas.height - 110
+            };
+            stonePos = { ...slingshotPos };
+        }
+
+        function startGame() {
+            gameActive = true;
+            projectile = null;
+            isDragging = false;
+            stonePos = { ...slingshotPos };
+            spawnPigeons();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 生成 6 隻以上雙向交錯飛行的醜萌灰鴿 (避開頂部 HUD 標示區域)
+        function spawnPigeons() {
+            pigeons = [];
+            const count = 6;
+            for (let i = 0; i < count; i++) {
+                let speedMult = difficulty === 'easy' ? 1.5 : (difficulty === 'medium' ? 2.8 : 4.6);
+                let radius = difficulty === 'easy' ? 26 : (difficulty === 'medium' ? 21 : 16);
+                
+                const direction = (i % 2 === 0) ? 1 : -1;
+                const startX = direction === 1 ? Math.random() * (canvas.width * 0.3) : canvas.width - Math.random() * (canvas.width * 0.3);
+
+                pigeons.push({
+                    x: startX,
+                    y: 130 + (i * 26) + Math.random() * 15,
+                    vx: direction * (1.2 + Math.random() * 1.2) * speedMult,
+                    radius: radius,
+                    wingPhase: Math.random() * Math.PI * 2,
+                    isHit: false,
+                    hitRotation: 0
+                });
+            }
+        }
+
+        // 羽毛爆裂特效 + 亮黃打擊火花環
+        function createHitFeathers(x, y) {
+            // 衝擊波圓環特效
+            hitImpactWaves.push({
+                x: x,
+                y: y,
+                radius: 5,
+                maxRadius: 45,
+                alpha: 1.0
+            });
+
+            // 羽毛爆裂 (25 顆粒子)
+            for (let i = 0; i < 25; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 9 + 2;
+                featherParticles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 2, // 向上拋
+                    size: Math.random() * 8 + 4,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 0.4,
+                    alpha: 1.0,
+                    color: Math.random() > 0.6 ? '#64748B' : (Math.random() > 0.3 ? '#94A3B8' : '#F1F5F9')
+                });
+            }
+        }
+
+        // ================= 觸控/滑鼠彈弓拖拽邏輯 =================
+        function getPointerPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function onPointerDown(e) {
+            if (!gameActive || projectile) return;
+            const pos = getPointerPos(e);
+            const dist = Math.hypot(pos.x - slingshotPos.x, pos.y - slingshotPos.y);
+
+            if (dist < 70) {
+                isDragging = true;
+                dragPos = pos;
+                playSound('stretch');
+            }
+        }
+
+        function onPointerMove(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            dragPos = getPointerPos(e);
+            
+            const maxPull = 90;
+            const dx = dragPos.x - slingshotPos.x;
+            const dy = dragPos.y - slingshotPos.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > maxPull) {
+                const angle = Math.atan2(dy, dx);
+                stonePos.x = slingshotPos.x + Math.cos(angle) * maxPull;
+                stonePos.y = slingshotPos.y + Math.sin(angle) * maxPull;
+            } else {
+                stonePos = { ...dragPos };
+            }
+        }
+
+        function onPointerUp() {
+            if (!isDragging) return;
+            isDragging = false;
+            playSound('shoot');
+
+            const dx = slingshotPos.x - stonePos.x;
+            const dy = slingshotPos.y - stonePos.y;
+            
+            // 彈射速度向量
+            projectile = {
+                x: stonePos.x,
+                y: stonePos.y,
+                vx: dx * 0.22,
+                vy: dy * 0.22,
+                radius: 10
+            };
+
+            stonePos = { ...slingshotPos };
+        }
+
+        // ================= 遊戲繪製與主 Loop =================
+        function gameLoop() {
+            if (!gameActive) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. 繪製藍天綠地背景
+            drawSkyAndGrass();
+
+            // 2. 更新並繪製鴿子 (丑萌都市灰鴿)
+            updateAndDrawPigeons();
+
+            // 3. 更新並繪製羽毛爆發粒子與打擊環
+            updateAndDrawFeathers();
+
+            // 4. 繪製彈弓橡皮筋與石頭
+            drawSlingshot();
+
+            // 5. 更新並繪製發射出的石頭
+            if (projectile) {
+                updateProjectile();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 藍天白雲綠草地繪製
+        function drawSkyAndGrass() {
+            // 白雲
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.beginPath();
+            ctx.arc(80, 80, 30, 0, Math.PI * 2);
+            ctx.arc(110, 75, 40, 0, Math.PI * 2);
+            ctx.arc(140, 85, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(canvas.width - 90, 100, 25, 0, Math.PI * 2);
+            ctx.arc(canvas.width - 65, 95, 35, 0, Math.PI * 2);
+            ctx.arc(canvas.width - 40, 105, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 綠意盎然草地丘陵 (底部)
+            ctx.fillStyle = '#22C55E';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height + 120, canvas.width * 0.8, 200, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#16A34A';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height + 150, canvas.width * 0.9, 200, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 繪製丑萌都市灰鴿
+        function drawPigeon(p) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            
+            // 如果撞擊，旋轉傾斜
+            if (p.isHit) {
+                ctx.rotate(p.hitRotation);
+            }
+
+            // 飛行方向朝向
+            const facingLeft = p.vx < 0;
+            if (facingLeft) {
+                ctx.scale(-1, 1);
+            }
+
+            const r = p.radius;
+
+            // 灰身 (ellipse)
+            ctx.fillStyle = '#64748B';
+            ctx.strokeStyle = '#0F172A';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, r * 1.3, r * 0.95, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 脖子綠耀斑
+            ctx.strokeStyle = '#10B981';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(r * 0.4, -r * 0.2, r * 0.4, 0, Math.PI * 0.8);
+            ctx.stroke();
+
+            // 灰頭
+            ctx.fillStyle = '#475569';
+            ctx.strokeStyle = '#0F172A';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(r * 0.75, -r * 0.4, r * 0.55, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 眼睛 (打中變 XX，沒打中是呆呆的大圓白眼)
+            if (p.isHit) {
+                ctx.strokeStyle = '#0F172A';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(r * 0.7, -r * 0.6); ctx.lineTo(r * 0.9, -r * 0.4);
+                ctx.moveTo(r * 0.9, -r * 0.6); ctx.lineTo(r * 0.7, -r * 0.4);
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(r * 0.85, -r * 0.45, r * 0.22, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#0F172A';
+                ctx.beginPath();
+                ctx.arc(r * 0.88, -r * 0.45, r * 0.1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 粉嘴巴
+            ctx.fillStyle = '#F97316';
+            ctx.beginPath();
+            ctx.moveTo(r * 1.25, -r * 0.45);
+            ctx.lineTo(r * 1.7, -r * 0.25);
+            ctx.lineTo(r * 1.28, -r * 0.1);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // 翅膀拍動
+            p.wingPhase += 0.2;
+            const wingY = Math.sin(p.wingPhase) * (r * 0.4);
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.moveTo(-r * 0.2, 0);
+            ctx.quadraticCurveTo(-r * 0.6, -r * 1.1 + wingY, r * 0.1, -r * 0.4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function updateAndDrawPigeons() {
+            pigeons.forEach(p => {
+                if (!p.isHit) {
+                    p.x += p.vx;
+                    // 水平循環穿梭飛行
+                    if (p.vx > 0 && p.x > canvas.width + 40) p.x = -40;
+                    if (p.vx < 0 && p.x < -40) p.x = canvas.width + 40;
+                } else {
+                    // 打中後往下墜落
+                    p.y += 6;
+                    p.hitRotation += 0.15;
+                }
+                drawPigeon(p);
+            });
+        }
+
+        function updateAndDrawFeathers() {
+            // 繪製衝擊波
+            for (let i = hitImpactWaves.length - 1; i >= 0; i--) {
+                const wave = hitImpactWaves[i];
+                wave.radius += 3.5;
+                wave.alpha -= 0.05;
+
+                if (wave.alpha <= 0) {
+                    hitImpactWaves.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = wave.alpha;
+                ctx.strokeStyle = '#FACC15'; // 亮黃打擊火花環
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 繪製羽毛爆裂粒子
+            for (let i = featherParticles.length - 1; i >= 0; i--) {
+                const fp = featherParticles[i];
+                fp.x += fp.vx;
+                fp.y += fp.vy;
+                fp.vy += 0.18; // 重力墜落
+                fp.alpha -= 0.022;
+                fp.rotation += fp.rotSpeed;
+
+                if (fp.alpha <= 0) {
+                    featherParticles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = fp.alpha;
+                ctx.translate(fp.x, fp.y);
+                ctx.rotate(fp.rotation);
+                ctx.fillStyle = fp.color;
+                ctx.strokeStyle = '#0F172A';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, fp.size, fp.size * 0.45, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function drawSlingshot() {
+            const basePos = slingshotPos;
+
+            // 橡皮筋 (後方)
+            ctx.strokeStyle = '#78350F';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(basePos.x - 25, basePos.y - 45);
+            ctx.lineTo(stonePos.x, stonePos.y);
+            ctx.stroke();
+
+            // 彈弓木頭本體 (Y字形)
+            ctx.strokeStyle = '#451A03';
+            ctx.lineWidth = 14;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(basePos.x, basePos.y + 60);
+            ctx.lineTo(basePos.x, basePos.y - 10);
+            ctx.lineTo(basePos.x - 28, basePos.y - 50);
+            ctx.moveTo(basePos.x, basePos.y - 10);
+            ctx.lineTo(basePos.x + 28, basePos.y - 50);
+            ctx.stroke();
+
+            // 石頭 (拉動中)
+            if (!projectile) {
+                ctx.fillStyle = '#475569';
+                ctx.strokeStyle = '#0F172A';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(stonePos.x, stonePos.y, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // 橡皮筋 (前方)
+            ctx.strokeStyle = '#9A3412';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(basePos.x + 25, basePos.y - 45);
+            ctx.lineTo(stonePos.x, stonePos.y);
+            ctx.stroke();
+
+            // 拉動時的拋物線軌跡預測虛線
+            if (isDragging) {
+                const dx = slingshotPos.x - stonePos.x;
+                const dy = slingshotPos.y - stonePos.y;
+                let simX = stonePos.x;
+                let simY = stonePos.y;
+                let simVx = dx * 0.22;
+                let simVy = dy * 0.22;
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath();
+                ctx.moveTo(simX, simY);
+
+                for (let step = 0; step < 25; step++) {
+                    simX += simVx;
+                    simY += simVy;
+                    simVy += 0.35; // 模擬重力
+                    ctx.lineTo(simX, simY);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        function updateProjectile() {
+            projectile.x += projectile.vx;
+            projectile.y += projectile.vy;
+            projectile.vy += 0.38; // 重力墜落
+
+            // 畫發射中的石頭
+            ctx.fillStyle = '#334155';
+            ctx.strokeStyle = '#0F172A';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 碰撞偵測 (Hit Collision)
+            pigeons.forEach(p => {
+                if (!p.isHit) {
+                    const dist = Math.hypot(projectile.x - p.x, projectile.y - p.y);
+                    if (dist < p.radius + projectile.radius + 6) {
+                        p.isHit = true;
+                        createHitFeathers(p.x, p.y);
+                        playSound('hit');
+                        onHitTarget();
+                        projectile = null;
+                    }
+                }
+            });
+
+            // 石頭飛出螢幕外面
+            if (projectile && (projectile.y > canvas.height + 50 || projectile.x < -50 || projectile.x > canvas.width + 50)) {
+                projectile = null;
+            }
+        }
+
+        // ================= 擊中反饋與飛鴿過場動畫 =================
+        function onHitTarget() {
+            score++;
+            const scoreEl = document.getElementById('scoreText');
+            if (scoreEl) scoreEl.innerText = score;
+
+            // 啟動「飛鴿傳書」過場動畫 Overlay
+            const overlay = document.getElementById('pigeonAnimOverlay');
+            const animPigeon = document.getElementById('animPigeon');
+            overlay.classList.remove('hidden');
+            animPigeon.classList.remove('animate-pigeon-fly');
+            void animPigeon.offsetWidth; // Trigger reflow
+            animPigeon.classList.add('animate-pigeon-fly');
+
+            // 1.2 秒過場完成後跳出爛藉口卡片
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                showExcuseModal();
+            }, 1200);
+        }
+
+        function showExcuseModal() {
+            const list = EXCUSES[difficulty];
+            const randomExcuse = list[Math.floor(Math.random() * list.length)];
+            
+            document.getElementById('excuseText').innerText = `「${randomExcuse}」`;
+            document.getElementById('excuseModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('excuseModal').classList.add('hidden');
+            spawnPigeons();
+        }
+
+        function copyExcuse() {
+            const text = document.getElementById('excuseText').innerText;
+            
+            // 複製到剪貼簿
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = text.replace(/「|」/g, '');
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+
+            // Toast 提示
+            const toast = document.getElementById('copyToast');
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(-10px)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(0)';
+            }, 1800);
+        }
+    </script>
+</body>
+</html>
